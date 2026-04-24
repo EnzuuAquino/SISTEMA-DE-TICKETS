@@ -1,5 +1,5 @@
 // ══════════════════════════════════
-// FUNCIONES DE INTERFAZ
+// FUNCIONES DE INTERFAZ - ServiceTIC
 // ══════════════════════════════════
 
 function badgeEstado(estado) {
@@ -77,12 +77,25 @@ function renderProgreso(estado) {
   return html;
 }
 
+/**
+ * Renderiza la tarjeta de ticket. 
+ * Ahora incluye correctamente la lógica de sedes sin errores de referencia.
+ */
 function renderTicketCardCompacta(ticket, botones = []) {
+  // Buscar data de la sede internamente para evitar "ticket is not defined"
+  const sedeData = (typeof SEDES !== 'undefined' && SEDES) ? SEDES.find(s => s.id === ticket.sedeId) : null;
+  
+  const badgeSedeHTML = sedeData 
+    ? `<span style="background:${sedeData.color}22;color:${sedeData.color};border:1px solid ${sedeData.color}44;
+        font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;">
+        <i class="fa-solid fa-building" style="margin-right:3px;"></i>${sedeData.nombre}
+       </span>` 
+    : "";
+
   let botonesHTML = botones.map(b => {
-    // 
     if (b.tipo === "atender") return `<button class="btn-atender" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();atenderTicket('${ticket.id}')"><i class="fa-solid fa-play"></i> Atender</button>`;
     if (b.tipo === "tomar")   return `<button class="btn-tomar"   style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();tomarTicket('${ticket.id}')"><i class="fa-solid fa-hand"></i> Tomar</button>`;
-    if (b.tipo === "delegar") return `<button class="btn-outline"  style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();abrirModalDelegar('${ticket.id}')"><i class="fa-solid fa-share-nodes"></i> Delegar</button>`;
+    if (b.tipo === "delegar") return `<button class="btn-outline" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();abrirModalDelegar('${ticket.id}')"><i class="fa-solid fa-share-nodes"></i> Delegar</button>`;
     return "";
   }).join("");
 
@@ -93,7 +106,7 @@ function renderTicketCardCompacta(ticket, botones = []) {
         <span class="tcc-id">#${ticket.id}</span>
         ${badgeEstado(ticket.estado)}
         ${badgePrioridad(ticket.prioridad)}
-        ${badgeSede}
+        ${badgeSedeHTML}
       </div>
       <div class="tcc-titulo">${ticket.titulo}</div>
       <div class="tcc-desc">${ticket.descripcion}</div>
@@ -107,14 +120,7 @@ function renderTicketCardCompacta(ticket, botones = []) {
     </div>
   `;
 }
-// Badge de sede
-let sede = SEDES ? SEDES.find(s => s.id === ticket.sedeId) : null;
-let badgeSede = sede
-  ? `<span style="background:${sede.color}22;color:${sede.color};border:1px solid ${sede.color}44;
-      font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;">
-      <i class="fa-solid fa-building" style="margin-right:3px;"></i>${sede.nombre}
-     </span>`
-  : "";
+
 function abrirModal(id) {
   document.getElementById(id).classList.remove("oculto");
   document.getElementById("overlay-modal").classList.remove("oculto");
@@ -143,13 +149,14 @@ function navegarA(pagina) {
   });
 
   const titulos = {
-    "dashboard":     ["Dashboard",                "Panel de Control"],
-    "mis-tickets":   ["Mis Tickets",              "Resumen de tu actividad"],
+    "dashboard":     ["Dashboard",           "Panel de Control"],
+    "mis-tickets":   ["Mis Tickets",         "Resumen de tu actividad"],
     "depto-tickets": ["Tickets del Departamento", "Todos los tickets del equipo"],
-    "todos-tickets": ["Todos los Tickets",        "Vista completa del sistema"],
-    "soluciones":    ["Centro de Soluciones",     "Base de conocimiento"],
-    "reportes":      ["Reportes y Análisis",      "Métricas de desempeño"],
-    "detalle":       ["Detalle del Ticket",       "Información completa"],
+    "todos-tickets": ["Todos los Tickets",   "Vista completa del sistema"],
+    "soluciones":    ["Centro de Soluciones",  "Base de conocimiento"],
+    "reportes":      ["Reportes y Análisis", "Métricas de desempeño"],
+    "detalle":       ["Detalle del Ticket",  "Información completa"],
+    "sedes":         ["Gestión de Sedes",    "Resumen por ubicación"]
   };
 
   if (titulos[pagina]) {
@@ -171,7 +178,6 @@ function llenarSelectTecnicos(selectId, excluir = null) {
   });
 }
 
-// Panel acceso restringido
 function renderAccesoRestringido(ticket) {
   return `
     <div class="card" style="background:#fffbeb; border-color:#fde68a; text-align:center; padding:32px;">
@@ -186,35 +192,7 @@ function renderAccesoRestringido(ticket) {
     </div>
   `;
 }
-// Tarjeta compacta para grids de 3 columnas
-function renderTicketCardCompacta(ticket, botones = []) {
-  let botonesHTML = botones.map(b => {
-    if (b.tipo === "atender") return `<button class="btn-atender" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();atenderTicket('${ticket.id}')"><i class="fa-solid fa-play"></i> Atender</button>`;
-    if (b.tipo === "tomar")   return `<button class="btn-tomar"  style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();tomarTicket('${ticket.id}')"><i class="fa-solid fa-hand"></i> Tomar</button>`;
-    if (b.tipo === "delegar") return `<button class="btn-outline" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();abrirModalDelegar('${ticket.id}')"><i class="fa-solid fa-share-nodes"></i> Delegar</button>`;
-    return "";
-  }).join("");
 
-  return `
-    <div class="ticket-card-compacta prioridad-${ticket.prioridad} ${ticket.estado==='ANULADO'?'ticket-anulado':''}"
-         onclick="verTicket('${ticket.id}')" style="cursor:pointer;">
-      <div class="tcc-header">
-        <span class="tcc-id">#${ticket.id}</span>
-        ${badgeEstado(ticket.estado)}
-        ${badgePrioridad(ticket.prioridad)}
-      </div>
-      <div class="tcc-titulo">${ticket.titulo}</div>
-      <div class="tcc-desc">${ticket.descripcion}</div>
-      ${renderProgreso(ticket.estado)}
-      <div class="tcc-meta">
-        <span><i class="fa-solid fa-user"></i> ${ticket.tecnico || "Sin asignar"}</span>
-        <span><i class="fa-solid fa-building"></i> ${ticket.departamento}</span>
-        <span><i class="fa-solid fa-clock"></i> ${tiempoTranscurrido(ticket.creadoEn)}</span>
-      </div>
-      ${botonesHTML ? `<div class="tcc-acciones" onclick="event.stopPropagation()">${botonesHTML}</div>` : ""}
-    </div>
-  `;
-}
 // ══════════════════════════════════
 // SISTEMA DE TOASTS
 // ══════════════════════════════════
@@ -227,8 +205,9 @@ const TOAST_ICONOS = {
 
 function toast(tipo, titulo, mensaje, duracion = 4000) {
   let contenedor = document.getElementById("toast-container");
+  if(!contenedor) return;
+  
   let id = "toast-" + Date.now();
-
   let el = document.createElement("div");
   el.className = `toast ${tipo}`;
   el.id = id;
@@ -245,10 +224,7 @@ function toast(tipo, titulo, mensaje, duracion = 4000) {
     </button>
     <div class="toast-barra"></div>
   `;
-
   contenedor.appendChild(el);
-
-  // Auto cerrar
   setTimeout(() => cerrarToast(id), duracion);
 }
 
@@ -258,8 +234,12 @@ function cerrarToast(id) {
   el.classList.add("saliendo");
   setTimeout(() => el.remove(), 300);
 }
+
+// ══════════════════════════════════
+// SECCIÓN APUNTES
+// ══════════════════════════════════
+
 function renderizarSeccionApuntes(apuntes) {
-  // Si no hay apuntes, mostramos un mensaje amigable
   if (!apuntes || apuntes.length === 0) {
     return `
       <div class="seccion-apuntes">
@@ -285,8 +265,8 @@ function renderizarSeccionApuntes(apuntes) {
                 <strong>${apunte.titulo}</strong>
                 <p>${apunte.descripcion || ''}</p>
                 <div class="apunte-meta">
-                   <span class="badge-prioridad-${apunte.prioridad || 'normal'}">${apunte.prioridad || 'normal'}</span>
-                   <span><i class="fa-regular fa-clock"></i> ${apunte.hora || ''}</span>
+                    <span class="badge-prioridad-${apunte.prioridad || 'normal'}">${apunte.prioridad || 'normal'}</span>
+                    <span><i class="fa-regular fa-clock"></i> ${apunte.hora || ''}</span>
                 </div>
               </div>
               <button class="btn-realizado" onclick="accionMarcarRealizado('${apunte.id}')">
@@ -299,25 +279,16 @@ function renderizarSeccionApuntes(apuntes) {
     </div>
   `;
 }
+
 function accionMarcarRealizado(id) {
   const elemento = document.getElementById(`apunte-${id}`);
   if (!elemento) return;
-
-  // 1. Tachar el texto inmediatamente
   elemento.classList.add('completado');
-  
-  // 2. Mostrar un toast de éxito (usando tu sistema de toasts existente)
   toast('exito', '¡Buen trabajo!', 'Apunte marcado como realizado.');
-
-  // 3. Esperar un poco para que se vea el tachado y luego animar la salida
   setTimeout(() => {
     elemento.classList.add('fade-out-apunte');
-    
-    // 4. Eliminar del DOM y podrías llamar aquí a tu lógica de datos.js
     setTimeout(() => {
       elemento.remove();
-      // Si usas una función global para eliminar en datos.js, llámala aquí:
-      // if (typeof eliminarApunteLogico === 'function') eliminarApunteLogico(id);
     }, 400);
   }, 600);
 }
